@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stillpoint Therapy Companion</title>
+    <meta
+      name="description"
+      content="A private therapy companion for mood check-ins, journaling, grounding, reframing, and safety planning."
+    >
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="side-nav" aria-label="Primary">
+        <a class="brand" href="#today" data-view-link="today" aria-label="Stillpoint home">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <span>
+            <strong>Stillpoint</strong>
+            <small>Therapy companion</small>
+          </span>
+        </a>
+
+        <nav class="nav-list" aria-label="App sections">
+          <button class="nav-button is-active" type="button" data-view-link="today">Today</button>
+          <button class="nav-button" type="button" data-view-link="checkin">Check-in</button>
+          <button class="nav-button" type="button" data-view-link="journal">Journal</button>
+          <button class="nav-button" type="button" data-view-link="tools">Tools</button>
+          <button class="nav-button" type="button" data-view-link="safety">Safety</button>
+        </nav>
+
+        <div class="privacy-note">
+          <strong>Private by default.</strong>
+          <span>Your entries stay in this browser.</span>
+          <span id="databaseStatus">Database loading...</span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="todayLabel">Today</p>
+            <h1 id="greeting">Take the next honest step.</h1>
+          </div>
+          <div class="topbar-actions">
+            <a class="ghost-button crisis-link" href="tel:+212 639 099 552">Call for help </a>
+            <button class="primary-button" type="button" data-jump="checkin">New check-in</button>
+          </div>
+        </header>
+
+        <section class="notice" aria-label="Important note">
+          <strong>Not emergency care.</strong>
+          <span>
+            Stillpoint supports reflection and coping. If you might hurt yourself or someone else, call emergency services or contact 988 now.
+          </span>
+        </section>
+
+        <section class="view is-active" id="view-today" aria-labelledby="today-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Dashboard</p>
+              <h2 id="today-title">A calmer read on the day</h2>
+            </div>
+            <p class="section-kicker" id="summaryLine">No check-ins yet.</p>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="ambient-panel">
+              <img src="assets/ambient-therapy.png" alt="" aria-hidden="true">
+              <div class="ambient-copy">
+                <p class="eyebrow">Right now</p>
+                <h3>Meet the moment without arguing with it.</h3>
+                <div class="ambient-actions">
+                  <button class="light-button" type="button" data-jump="tools" data-tool="breath">Breathe</button>
+                  <button class="light-button" type="button" data-jump="journal">Write</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-label">Latest mood</span>
+              <strong id="latestMood">--</strong>
+              <span id="latestMoodText">Waiting for your first check-in.</span>
+            </article>
+
+            <article class="metric-card accent-coral">
+              <span class="metric-label">Journal entries</span>
+              <strong id="journalCount">0</strong>
+              <span id="journalCountText">A clean page is ready.</span>
+            </article>
+
+            <article class="metric-card accent-iris">
+              <span class="metric-label">Care streak</span>
+              <strong id="streakCount">0 days</strong>
+              <span id="streakText">Small counts. Honest counts.</span>
+            </article>
+
+            <article class="panel today-checkin">
+              <div class="panel-heading">
+                <h3>Quick check-in</h3>
+                <span id="moodPhrase">Steady</span>
+              </div>
+              <label class="slider-label" for="moodRange">
+                <span>Mood</span>
+                <strong id="moodValue">6</strong>
+              </label>
+              <input id="moodRange" type="range" min="1" max="10" value="6">
+              <div class="chip-row" id="emotionChips" aria-label="Emotions"></div>
+              <label class="field-label" for="quickNote">What is asking for attention?</label>
+              <textarea id="quickNote" rows="4" placeholder="A sentence is enough."></textarea>
+              <div class="button-row">
+                <button class="primary-button" type="button" id="saveMood">Save check-in</button>
+                <button class="ghost-button" type="button" id="clearMoodForm">Clear</button>
+              </div>
+            </article>
+
+            <article class="panel breath-card">
+              <div class="panel-heading">
+                <h3>Breathing</h3>
+                <select id="breathPattern" aria-label="Breathing pattern">
+                  <option value="calm">4-2-6</option>
+                  <option value="box">4-4-4-4</option>
+                  <option value="release">3-1-7</option>
+                </select>
+              </div>
+              <div class="breath-visual" aria-live="polite">
+                <div class="breath-ring" id="breathRing"></div>
+                <div class="breath-center">
+                  <strong id="breathPhase">Ready</strong>
+                  <span id="breathTimer">00:00</span>
+                </div>
+              </div>
+              <div class="button-row">
+                <button class="primary-button" type="button" id="startBreath">Start</button>
+                <button class="ghost-button" type="button" id="pauseBreath">Pause</button>
+              </div>
+            </article>
+
+            <article class="panel next-step">
+              <div class="panel-heading">
+                <h3>One useful next step</h3>
+                <button class="icon-button" type="button" id="refreshStep" aria-label="Refresh next step">↻</button>
+              </div>
+              <p id="nextStepText">Name the feeling, then lower the demand by one notch.</p>
+              <button class="ghost-button" type="button" data-jump="tools">Open tools</button>
+            </article>
+
+            <article class="panel agent-card" aria-labelledby="agent-title">
+              <div class="panel-heading">
+                <div>
+                  <h3 id="agent-title">Still, your little AI agent</h3>
+                  <span>Private mode</span>
+                </div>
+                <button class="icon-button" type="button" id="clearAgentChat" aria-label="Clear agent chat">x</button>
+              </div>
+              <div class="agent-messages" id="agentMessages" aria-live="polite"></div>
+              <div class="agent-actions" aria-label="Agent quick prompts">
+                <button class="chip" type="button" data-agent-prompt="Help me ground for two minutes.">Ground me</button>
+                <button class="chip" type="button" data-agent-prompt="Reflect on my latest mood.">Reflect mood</button>
+                <button class="chip" type="button" data-agent-prompt="Help me reframe this thought.">Reframe</button>
+                <button class="chip" type="button" data-agent-prompt="Summarize my recent patterns.">Patterns</button>
+              </div>
+              <div class="agent-input-row">
+                <label class="sr-only" for="agentInput">Message Still</label>
+                <textarea id="agentInput" rows="2" placeholder="Ask for grounding, a reframe, or a next step."></textarea>
+                <button class="primary-button" type="button" id="sendAgentMessage">Send</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="view-checkin" aria-labelledby="checkin-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Check-in</p>
+              <h2 id="checkin-title">Track what changes</h2>
+            </div>
+            <button class="ghost-button" type="button" id="exportData">Export notes</button>
+          </div>
+
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>Mood history</h3>
+                <span id="historyMeta">No data yet</span>
+              </div>
+              <div class="chart" id="moodChart" aria-label="Mood history chart"></div>
+              <div class="entry-list" id="moodEntries"></div>
+            </article>
+
+            <article class="panel">
+              <h3>Body scan</h3>
+              <div class="body-map">
+                <button type="button" data-body="jaw">Jaw</button>
+                <button type="button" data-body="chest">Chest</button>
+                <button type="button" data-body="stomach">Stomach</button>
+                <button type="button" data-body="hands">Hands</button>
+                <button type="button" data-body="legs">Legs</button>
+              </div>
+              <label class="field-label" for="bodyNote">What do you notice?</label>
+              <textarea id="bodyNote" rows="6" placeholder="Tight, warm, restless, heavy, quiet..."></textarea>
+              <button class="primary-button" type="button" id="saveBodyNote">Save body note</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="view-journal" aria-labelledby="journal-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Journal</p>
+              <h2 id="journal-title">Make the inside visible</h2>
+            </div>
+            <button class="ghost-button" type="button" id="newPrompt">New prompt</button>
+          </div>
+
+          <div class="two-column journal-layout">
+            <article class="panel journal-compose">
+              <p class="prompt-card" id="journalPrompt">What would feel 5% lighter by tonight?</p>
+              <label class="field-label" for="journalText">Entry</label>
+              <textarea id="journalText" rows="10" placeholder="Write without polishing."></textarea>
+              <div class="button-row">
+                <button class="primary-button" type="button" id="saveJournal">Save entry</button>
+                <button class="ghost-button" type="button" id="clearJournal">Clear</button>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>Recent entries</h3>
+                <span id="recentJournalMeta">0 saved</span>
+              </div>
+              <div class="entry-list" id="journalEntries"></div>
+            </article>
+          </div>
+
+          <article class="panel reframe-panel">
+            <div class="panel-heading">
+              <h3>Thought reframe</h3>
+              <span>CBT-style worksheet</span>
+            </div>
+            <div class="reframe-grid">
+              <label>
+                <span>Automatic thought</span>
+                <textarea id="thoughtInput" rows="4" placeholder="The thought that keeps looping..."></textarea>
+              </label>
+              <label>
+                <span>Facts for and against</span>
+                <textarea id="evidenceInput" rows="4" placeholder="What supports it? What complicates it?"></textarea>
+              </label>
+              <label>
+                <span>Balanced thought</span>
+                <textarea id="balancedInput" rows="4" placeholder="A kinder, more complete sentence..."></textarea>
+              </label>
+            </div>
+            <div class="button-row">
+              <button class="primary-button" type="button" id="suggestReframe">Shape reframe</button>
+              <button class="ghost-button" type="button" id="saveReframe">Save reframe</button>
+            </div>
+            <div class="entry-list compact" id="reframeEntries"></div>
+          </article>
+        </section>
+
+        <section class="view" id="view-tools" aria-labelledby="tools-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Tools</p>
+              <h2 id="tools-title">Regulate before solving</h2>
+            </div>
+          </div>
+
+          <div class="tools-grid">
+            <article class="panel wide-tool" id="breathTool">
+              <div class="panel-heading">
+                <h3>Breathing room</h3>
+                <span id="breathHint">Let the exhale be longer.</span>
+              </div>
+              <div class="breath-visual large">
+                <div class="breath-ring mirror" id="breathRingLarge"></div>
+                <div class="breath-center">
+                  <strong id="breathPhaseLarge">Ready</strong>
+                  <span id="breathTimerLarge">00:00</span>
+                </div>
+              </div>
+              <div class="button-row">
+                <button class="primary-button" type="button" id="startBreathLarge">Start</button>
+                <button class="ghost-button" type="button" id="pauseBreathLarge">Pause</button>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>Grounding</h3>
+                <span id="groundingStep">1 of 5</span>
+              </div>
+              <p class="tool-prompt" id="groundingPrompt">Name five things you can see.</p>
+              <textarea id="groundingInput" rows="5" placeholder="List them here."></textarea>
+              <div class="button-row">
+                <button class="primary-button" type="button" id="nextGrounding">Next</button>
+                <button class="ghost-button" type="button" id="resetGrounding">Reset</button>
+              </div>
+            </article>
+
+            <article class="panel">
+              <h3>Urge surf</h3>
+              <label class="slider-label" for="urgeRange">
+                <span>Intensity</span>
+                <strong id="urgeValue">5</strong>
+              </label>
+              <input id="urgeRange" type="range" min="1" max="10" value="5">
+              <p class="tool-prompt" id="urgeText">Give the wave a shape, a size, and a place in the body.</p>
+              <button class="ghost-button" type="button" id="refreshUrge">Another anchor</button>
+            </article>
+
+            <article class="panel">
+              <h3>Values compass</h3>
+              <div class="values-grid" id="valuesGrid"></div>
+              <p class="tool-prompt" id="valueText">Pick one value and make the next action smaller.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="view-safety" aria-labelledby="safety-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Safety</p>
+              <h2 id="safety-title">Plan for harder moments</h2>
+            </div>
+          </div>
+
+          <div class="safety-grid">
+            <article class="panel crisis-panel">
+              <h3>Need support now?</h3>
+              <p>
+                In the U.S., call or text 988, or use the 988 chat. If there is immediate danger, call local emergency services.
+              </p>
+              <div class="button-row">
+                <a class="primary-button" href="tel:+212 639 099 552">Call Help</a>
+                <a class="ghost-button" href="sms:+212 639 099 552">Text message</a>
+                <a class="ghost-button" href="https://988lifeline.org/chat/" target="_blank" rel="noreferrer">Chat</a>
+              </div>
+            </article>
+
+            <article class="panel safety-plan">
+              <h3>Safety plan</h3>
+              <label>
+                <span>Warning signs</span>
+                <textarea data-plan="warning" rows="4" placeholder="What tells you things are getting dangerous?"></textarea>
+              </label>
+              <label>
+                <span>Reasons to stay</span>
+                <textarea data-plan="reasons" rows="4" placeholder="People, promises, future moments, values..."></textarea>
+              </label>
+              <label>
+                <span>People and places</span>
+                <textarea data-plan="contacts" rows="4" placeholder="Names, numbers, safe locations..."></textarea>
+              </label>
+              <label>
+                <span>Make the space safer</span>
+                <textarea data-plan="environment" rows="4" placeholder="What should be moved, locked, delayed, or shared?"></textarea>
+              </label>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="database.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
