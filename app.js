@@ -1038,7 +1038,7 @@ function renderAgentMessages() {
     : [
         {
           role: "agent",
-          text: "Hi, I am Still. You can talk to me freely. I can reflect, ask questions, help you reframe, ground you, or notice patterns from your local notes.",
+          text: "Hi, I am Yassuo. You can talk to me freely. I can reflect, ask questions, help you reframe, ground you, or notice patterns from your local notes.",
         },
       ];
 
