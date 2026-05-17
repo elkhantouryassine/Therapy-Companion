@@ -730,6 +730,11 @@ select {
   background: rgba(222, 236, 230, 0.88);
 }
 
+.agent-message.is-pending {
+  color: var(--moss);
+  font-style: italic;
+}
+
 .agent-actions {
   display: flex;
   flex-wrap: wrap;

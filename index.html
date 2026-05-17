@@ -211,12 +211,13 @@
               <div class="panel-heading">
                 <div>
                   <h3 id="agent-title">Still, your little AI agent</h3>
-                  <span>Private mode</span>
+                  <span>Free talk mode</span>
                 </div>
                 <button class="icon-button" type="button" id="clearAgentChat" aria-label="Clear agent chat">x</button>
               </div>
               <div class="agent-messages" id="agentMessages" aria-live="polite"></div>
               <div class="agent-actions" aria-label="Agent quick prompts">
+                <button class="chip" type="button" data-agent-prompt="I want to talk freely. Ask me one thoughtful question.">Free talk</button>
                 <button class="chip" type="button" data-agent-prompt="Help me ground for two minutes.">Ground me</button>
                 <button class="chip" type="button" data-agent-prompt="Reflect on my latest mood.">Reflect mood</button>
                 <button class="chip" type="button" data-agent-prompt="Help me reframe this thought.">Reframe</button>
@@ -224,7 +225,7 @@
               </div>
               <div class="agent-input-row">
                 <label class="sr-only" for="agentInput">Message Still</label>
-                <textarea id="agentInput" rows="2" placeholder="Ask for grounding, a reframe, or a next step."></textarea>
+                <textarea id="agentInput" rows="2" placeholder="Talk to Still about anything on your mind."></textarea>
                 <button class="primary-button" type="button" id="sendAgentMessage">Send</button>
               </div>
             </article>
