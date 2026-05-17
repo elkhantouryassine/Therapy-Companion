@@ -142,7 +142,10 @@ function persistState() {
 
   saveQueue = saveQueue
     .then(() => window.StillpointDB.saveState(state))
-    .then(updateDatabaseStatus)
+    .then(() => {
+      updateDatabaseStatus();
+      updateProgressStatus();
+    })
     .catch((error) => {
       console.warn("Could not save Stillpoint data", error);
       showToast("Could not save this entry.");
@@ -160,6 +163,58 @@ function updateDatabaseStatus() {
   if (accountStatus && currentUser) {
     accountStatus.textContent = `Signed in as ${currentUser.email}`;
   }
+}
+
+function updateProgressStatus() {
+  const status = $("#progressStatus");
+  if (!status) return;
+
+  if (!currentUser) {
+    status.textContent = "Progress saves after sign in.";
+    return;
+  }
+
+  const chatCount = state.agentMessages.filter((message) => !message.pending).length;
+  const safetyCount = Object.values(state.safetyPlan || {}).filter(Boolean).length;
+  const total =
+    state.moods.length +
+    state.journals.length +
+    state.reframes.length +
+    state.bodyNotes.length +
+    chatCount +
+    safetyCount;
+
+  status.textContent = total
+    ? `${total} saved item${total === 1 ? "" : "s"} for this account`
+    : "Your first saved step will stay with this account.";
+}
+
+function applyTheme(theme) {
+  const safeTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = safeTheme;
+  document.body.dataset.theme = safeTheme;
+
+  const toggle = $("#themeToggle");
+  if (toggle) {
+    const nextTheme = safeTheme === "dark" ? "light" : "dark";
+    toggle.textContent = safeTheme === "dark" ? "Light mode" : "Dark mode";
+    toggle.setAttribute("aria-label", `Switch to ${nextTheme} mode`);
+    toggle.setAttribute("aria-pressed", String(safeTheme === "dark"));
+  }
+}
+
+function initTheme() {
+  $("#themeToggle")?.addEventListener("click", () => {
+    const currentTheme = state.preferences?.theme === "dark" ? "dark" : "light";
+    const nextTheme = currentTheme === "dark" ? "light" : "dark";
+    state.preferences = {
+      ...(state.preferences || {}),
+      theme: nextTheme,
+    };
+    applyTheme(nextTheme);
+    persistState();
+    showToast(`${nextTheme === "dark" ? "Dark" : "Light"} mode saved.`);
+  });
 }
 
 function formatDate(iso) {
@@ -211,6 +266,7 @@ function showAuth(mode = "login") {
 async function showApp(user) {
   currentUser = user;
   Object.assign(state, window.StillpointDB.createEmptyState(), await window.StillpointDB.loadState());
+  applyTheme(state.preferences?.theme || "light");
   $("#authScreen").classList.add("is-hidden");
   $("#appShell").classList.remove("is-hidden");
   $("#appShell").removeAttribute("aria-hidden");
@@ -228,6 +284,7 @@ async function showApp(user) {
     initAgent();
     initSafetyPlan();
     initExport();
+    initTheme();
     initAccountActions();
     appInitialized = true;
   }
@@ -400,7 +457,7 @@ function renderMood() {
   const latest = state.moods[0];
   $("#latestMood").textContent = latest ? `${latest.score}/10` : "--";
   $("#latestMoodText").textContent = latest
-    ? `${moodText(latest.score)} · ${formatDate(latest.createdAt)}`
+    ? `${moodText(latest.score)} - ${formatDate(latest.createdAt)}`
     : "Waiting for your first check-in.";
 
   $("#summaryLine").textContent = latest
@@ -428,11 +485,11 @@ function renderMood() {
     ? state.moods
         .slice(0, 8)
         .map((entry) => {
-          const tags = entry.emotions.length ? ` · ${entry.emotions.join(", ")}` : "";
+          const tags = entry.emotions.length ? ` - ${entry.emotions.join(", ")}` : "";
           const note = entry.note ? `<p>${escapeHtml(entry.note)}</p>` : "";
           return `
             <article class="entry">
-              <strong>${entry.score}/10 · ${moodText(entry.score)}</strong>
+              <strong>${entry.score}/10 - ${moodText(entry.score)}</strong>
               <time datetime="${entry.createdAt}">${formatDate(entry.createdAt)}${tags}</time>
               ${note}
             </article>
@@ -1132,6 +1189,7 @@ function render() {
   renderJournal();
   renderReframes();
   renderAgentMessages();
+  updateProgressStatus();
   $("#streakText").textContent = careStreak()
     ? "You showed up today."
     : "A check-in or entry starts it.";

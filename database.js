@@ -1,8 +1,9 @@
 (function () {
   const DB_NAME = "stillpoint-therapy-db";
-  const DB_VERSION = 3;
+  const DB_VERSION = 4;
   const LEGACY_STORAGE_KEY = "stillpoint-therapy-companion-v1";
   const META_STORE = "meta";
+  const PREFERENCES_STORE = "preferences";
   const SESSION_STORE = "session";
   const USERS_STORE = "users";
   const CURRENT_USER_KEY = "currentUser";
@@ -28,6 +29,9 @@
         reasons: "",
         contacts: "",
         environment: "",
+      },
+      preferences: {
+        theme: "light",
       },
     };
   }
@@ -59,6 +63,10 @@
 
         if (!db.objectStoreNames.contains("safetyPlan")) {
           db.createObjectStore("safetyPlan", { keyPath: "id" });
+        }
+
+        if (!db.objectStoreNames.contains(PREFERENCES_STORE)) {
+          db.createObjectStore(PREFERENCES_STORE, { keyPath: "id" });
         }
 
         if (!db.objectStoreNames.contains(USERS_STORE)) {
@@ -149,6 +157,10 @@
       safetyPlan: {
         ...empty.safetyPlan,
         ...(rawState.safetyPlan || {}),
+      },
+      preferences: {
+        ...empty.preferences,
+        ...(rawState.preferences || {}),
       },
     };
   }
@@ -361,6 +373,17 @@
       };
     }
 
+    const preferencesTransaction = db.transaction(PREFERENCES_STORE, "readonly");
+    const preferences = await requestToPromise(
+      preferencesTransaction.objectStore(PREFERENCES_STORE).get(userId),
+    );
+    if (preferences) {
+      state.preferences = {
+        ...state.preferences,
+        theme: preferences.theme === "dark" ? "dark" : "light",
+      };
+    }
+
     return state;
   }
 
@@ -389,12 +412,23 @@
     await transactionComplete(transaction);
   }
 
+  async function savePreferences(db, preferences, userId) {
+    const transaction = db.transaction(PREFERENCES_STORE, "readwrite");
+    transaction.objectStore(PREFERENCES_STORE).put({
+      id: userId,
+      theme: preferences?.theme === "dark" ? "dark" : "light",
+      updatedAt: new Date().toISOString(),
+    });
+    await transactionComplete(transaction);
+  }
+
   async function saveToIndexedDb(db, state, userId) {
     await Promise.all(entryStores.map((storeName) => clearUserStore(db, storeName, userId)));
     await Promise.all(
       entryStores.map((storeName) => saveEntries(db, storeName, state[storeName] || [], userId)),
     );
     await saveSafetyPlan(db, state.safetyPlan || createEmptyState().safetyPlan, userId);
+    await savePreferences(db, state.preferences || createEmptyState().preferences, userId);
   }
 
   function saveToLocalStorage(state) {
