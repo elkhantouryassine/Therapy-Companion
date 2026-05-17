@@ -84,6 +84,8 @@ const state = window.StillpointDB.createEmptyState();
 const selectedEmotions = new Set();
 const selectedBody = new Set();
 
+let appInitialized = false;
+let currentUser = null;
 let currentPrompt = 0;
 let groundingIndex = 0;
 let breathInterval = null;
@@ -93,10 +95,15 @@ let breathPhaseRemaining = 0;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+const views = ["today", "checkin", "journal", "tools", "safety"];
 
 let saveQueue = Promise.resolve();
 
 function persistState() {
+  if (!currentUser) {
+    return Promise.resolve();
+  }
+
   saveQueue = saveQueue
     .then(() => window.StillpointDB.saveState(state))
     .then(updateDatabaseStatus)
@@ -111,6 +118,11 @@ function updateDatabaseStatus() {
   const status = $("#databaseStatus");
   if (status) {
     status.textContent = `Database: ${window.StillpointDB.getStatus()}`;
+  }
+
+  const accountStatus = $("#accountStatus");
+  if (accountStatus && currentUser) {
+    accountStatus.textContent = `Signed in as ${currentUser.email}`;
   }
 }
 
@@ -139,6 +151,105 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 2400);
 }
 
+function setAuthMode(mode) {
+  const isSignup = mode === "signup";
+  $$("[data-auth-mode]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.authMode === mode);
+  });
+  $("#loginForm").classList.toggle("is-active", !isSignup);
+  $("#signupForm").classList.toggle("is-active", isSignup);
+  $("#authSubtitle").textContent = isSignup
+    ? "Create a local account on this browser."
+    : "Sign in to continue.";
+  $("#authMessage").textContent = "";
+}
+
+function showAuth(mode = "login") {
+  currentUser = null;
+  $("#authScreen").classList.remove("is-hidden");
+  $("#appShell").classList.add("is-hidden");
+  $("#appShell").setAttribute("aria-hidden", "true");
+  setAuthMode(mode);
+}
+
+async function showApp(user) {
+  currentUser = user;
+  Object.assign(state, window.StillpointDB.createEmptyState(), await window.StillpointDB.loadState());
+  $("#authScreen").classList.add("is-hidden");
+  $("#appShell").classList.remove("is-hidden");
+  $("#appShell").removeAttribute("aria-hidden");
+  $("#accountName").textContent = user.name || user.email;
+  updateDatabaseStatus();
+
+  if (!appInitialized) {
+    initHeader();
+    initNavigation();
+    initMood();
+    initBodyScan();
+    initJournal();
+    initBreathing();
+    initTools();
+    initAgent();
+    initSafetyPlan();
+    initExport();
+    initAccountActions();
+    appInitialized = true;
+  }
+
+  populateSafetyPlan();
+  render();
+}
+
+function initAuth() {
+  $$("[data-auth-mode]").forEach((button) => {
+    button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
+  });
+
+  $("#loginForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await submitAuth(async () =>
+      window.StillpointDB.login($("#loginEmail").value, $("#loginPassword").value),
+    );
+  });
+
+  $("#signupForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await submitAuth(async () =>
+      window.StillpointDB.createAccount({
+        name: $("#signupName").value,
+        email: $("#signupEmail").value,
+        password: $("#signupPassword").value,
+      }),
+    );
+  });
+}
+
+async function submitAuth(action) {
+  const message = $("#authMessage");
+  message.textContent = "Checking account...";
+  try {
+    const user = await action();
+    $("#loginForm").reset();
+    $("#signupForm").reset();
+    message.textContent = "";
+    await showApp(user);
+  } catch (error) {
+    message.textContent = error.message || "Could not authenticate.";
+  }
+}
+
+function initAccountActions() {
+  $("#logoutButton").addEventListener("click", async () => {
+    await persistState();
+    await window.StillpointDB.logout();
+    Object.assign(state, window.StillpointDB.createEmptyState());
+    pauseBreathing();
+    render();
+    showAuth("login");
+    showToast("Logged out.");
+  });
+}
+
 function setView(viewName) {
   $$(".view").forEach((view) => view.classList.toggle("is-active", view.id === `view-${viewName}`));
   $$("[data-view-link]").forEach((button) => {
@@ -146,6 +257,11 @@ function setView(viewName) {
   });
   window.location.hash = viewName;
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function getRouteView() {
+  const route = window.location.hash.replace("#", "") || "today";
+  return views.includes(route) ? route : "today";
 }
 
 function initHeader() {
@@ -180,8 +296,14 @@ function initNavigation() {
     });
   });
 
-  const startView = window.location.hash.replace("#", "") || "today";
-  setView(["today", "checkin", "journal", "tools", "safety"].includes(startView) ? startView : "today");
+  window.addEventListener("hashchange", () => {
+    const nextView = getRouteView();
+    if (!document.querySelector(`#view-${nextView}`)?.classList.contains("is-active")) {
+      setView(nextView);
+    }
+  });
+
+  setView(getRouteView());
 }
 
 function initMood() {
@@ -595,6 +717,7 @@ function handleAgentSubmit() {
 }
 
 function sendAgentPrompt(input) {
+  state.agentMessages = orderAgentMessages(state.agentMessages);
   const now = new Date().toISOString();
   state.agentMessages.push({
     id: crypto.randomUUID(),
@@ -606,7 +729,7 @@ function sendAgentPrompt(input) {
     id: crypto.randomUUID(),
     role: "agent",
     text: generateAgentReply(input),
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() + 1).toISOString(),
   });
   state.agentMessages = state.agentMessages.slice(-80);
   renderAgentMessages();
@@ -617,7 +740,7 @@ function generateAgentReply(input) {
   const normalized = input.toLowerCase();
 
   if (crisisPhrases.some((phrase) => normalized.includes(phrase))) {
-    return "This may be a safety moment, so please do not handle it alone. If there is immediate danger, call local emergency services now. In the U.S., call or text 988 or use 988 chat. Move near another person if you can, and put distance between yourself and anything you could use to get hurt.";
+    return "This may be a safety moment, so please do not handle it alone. If there is immediate danger, call local emergency services now or use your saved help contact. If you are in the U.S., call or text 988 or use 988 chat. Move near another person if you can, and put distance between yourself and anything you could use to get hurt.";
   }
 
   if (includesAny(normalized, ["pattern", "summary", "summarize", "trend"])) {
@@ -657,8 +780,9 @@ function reflectLatestMood() {
     return "I do not have a saved mood yet. Do a quick check-in first, then I can reflect it back with a more useful next step.";
   }
 
-  const emotionsLine = latest.emotions.length
-    ? ` You marked ${latest.emotions.join(", ").toLowerCase()}.`
+  const emotions = latest.emotions || [];
+  const emotionsLine = emotions.length
+    ? ` You marked ${emotions.join(", ").toLowerCase()}.`
     : "";
   const suggestion =
     latest.score <= 4
@@ -723,7 +847,7 @@ function includesAny(value, needles) {
 
 function renderAgentMessages() {
   const messages = state.agentMessages.length
-    ? state.agentMessages
+    ? orderAgentMessages(state.agentMessages)
     : [
         {
           role: "agent",
@@ -746,13 +870,44 @@ function renderAgentMessages() {
   messagePanel.scrollTop = messagePanel.scrollHeight;
 }
 
+function orderAgentMessages(messages) {
+  const ordered = [...messages].sort((a, b) => {
+    const timeDifference = new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+    if (timeDifference !== 0) return timeDifference;
+    if (a.role === b.role) return 0;
+    return a.role === "user" ? -1 : 1;
+  });
+
+  for (let index = 0; index < ordered.length - 1; index += 1) {
+    const current = ordered[index];
+    const next = ordered[index + 1];
+    const currentTime = new Date(current.createdAt || 0).getTime();
+    const nextTime = new Date(next.createdAt || 0).getTime();
+    if (
+      current.role === "agent" &&
+      next.role === "user" &&
+      Math.abs(currentTime - nextTime) < 5000
+    ) {
+      ordered[index] = next;
+      ordered[index + 1] = current;
+    }
+  }
+
+  return ordered;
+}
+
 function initSafetyPlan() {
   $$("[data-plan]").forEach((field) => {
-    field.value = state.safetyPlan[field.dataset.plan] || "";
     field.addEventListener("input", () => {
       state.safetyPlan[field.dataset.plan] = field.value;
       persistState();
     });
+  });
+}
+
+function populateSafetyPlan() {
+  $$("[data-plan]").forEach((field) => {
+    field.value = state.safetyPlan[field.dataset.plan] || "";
   });
 }
 
@@ -761,6 +916,12 @@ function initExport() {
     const payload = JSON.stringify(
       {
         exportedAt: new Date().toISOString(),
+        account: currentUser
+          ? {
+              name: currentUser.name,
+              email: currentUser.email,
+            }
+          : null,
         ...state,
       },
       null,
@@ -802,23 +963,18 @@ function escapeHtml(value) {
   });
 }
 
-async function initApp() {
-  Object.assign(state, await window.StillpointDB.loadState());
-  updateDatabaseStatus();
-  initHeader();
-  initNavigation();
-  initMood();
-  initBodyScan();
-  initJournal();
-  initBreathing();
-  initTools();
-  initAgent();
-  initSafetyPlan();
-  initExport();
-  render();
+async function bootApp() {
+  initAuth();
+  const user = await window.StillpointDB.getCurrentUser();
+  if (user) {
+    await showApp(user);
+  } else {
+    showAuth("login");
+  }
 }
 
-initApp().catch((error) => {
+bootApp().catch((error) => {
   console.error("Could not start Stillpoint", error);
-  showToast("Could not start the app.");
+  showAuth("login");
+  $("#authMessage").textContent = "Could not open the account database.";
 });

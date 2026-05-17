@@ -11,7 +11,66 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <div class="app-shell">
+    <section class="auth-screen" id="authScreen" aria-labelledby="authTitle">
+      <div class="auth-visual">
+        <img src="assets/ambient-therapy.png" alt="" aria-hidden="true">
+        <div>
+          <p class="eyebrow">Stillpoint</p>
+          <h1 id="authTitle">Your private therapy companion.</h1>
+          <p>Make an account on this device to keep check-ins, journals, safety plans, and agent chat separated from other users.</p>
+        </div>
+      </div>
+
+      <div class="auth-panel">
+        <div class="auth-card">
+          <div class="auth-card-header">
+            <span class="brand-mark" aria-hidden="true">S</span>
+            <div>
+              <h2>Welcome back</h2>
+              <p id="authSubtitle">Sign in to continue.</p>
+            </div>
+          </div>
+
+          <div class="auth-tabs" aria-label="Authentication mode">
+            <button class="is-active" type="button" data-auth-mode="login">Log in</button>
+            <button type="button" data-auth-mode="signup">Create account</button>
+          </div>
+
+          <form class="auth-form is-active" id="loginForm">
+            <label>
+              <span>Email</span>
+              <input id="loginEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Your password">
+            </label>
+            <button class="primary-button" type="submit">Log in</button>
+          </form>
+
+          <form class="auth-form" id="signupForm">
+            <label>
+              <span>Name</span>
+              <input id="signupName" type="text" autocomplete="name" required placeholder="Your name">
+            </label>
+            <label>
+              <span>Email</span>
+              <input id="signupEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="signupPassword" type="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters">
+            </label>
+            <button class="primary-button" type="submit">Create account</button>
+          </form>
+
+          <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+          <p class="auth-footnote">Accounts are local to this browser. This is privacy for a shared device, not cloud security.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="app-shell is-hidden" id="appShell" aria-hidden="true">
       <aside class="side-nav" aria-label="Primary">
         <a class="brand" href="#today" data-view-link="today" aria-label="Stillpoint home">
           <span class="brand-mark" aria-hidden="true">S</span>
@@ -32,6 +91,7 @@
         <div class="privacy-note">
           <strong>Private by default.</strong>
           <span>Your entries stay in this browser.</span>
+          <span id="accountStatus">Signed in</span>
           <span id="databaseStatus">Database loading...</span>
         </div>
       </aside>
@@ -43,6 +103,8 @@
             <h1 id="greeting">Take the next honest step.</h1>
           </div>
           <div class="topbar-actions">
+            <span class="account-pill" id="accountName">Account</span>
+            <button class="ghost-button" type="button" id="logoutButton">Log out</button>
             <a class="ghost-button crisis-link" href="tel:+212 639 099 552">Call for help </a>
             <button class="primary-button" type="button" data-jump="checkin">New check-in</button>
           </div>
@@ -331,12 +393,12 @@
             <article class="panel crisis-panel">
               <h3>Need support now?</h3>
               <p>
-                In the U.S., call or text 988, or use the 988 chat. If there is immediate danger, call local emergency services.
+                In Morocco., call or text Help, or use the chat. If there is immediate danger, call local emergency services.
               </p>
               <div class="button-row">
-                <a class="primary-button" href="tel:+212 639 099 552">Call Help</a>
-                <a class="ghost-button" href="sms:+212 639 099 552">Text message</a>
-                <a class="ghost-button" href="https://988lifeline.org/chat/" target="_blank" rel="noreferrer">Chat</a>
+                <a class="primary-button" href="tel:">Call Help</a>
+                <a class="ghost-button" href="sms:">Text message</a>
+                <a class="ghost-button" href="" target="_blank" rel="noreferrer">Chat</a>
               </div>
             </article>
 
