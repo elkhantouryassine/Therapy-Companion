@@ -45,63 +45,12 @@ const urgeAnchors = [
 
 const values = ["Care", "Courage", "Rest", "Honesty", "Repair", "Patience", "Focus", "Play"];
 
-const crisisPhrases = [
-  "kill myself",
-  "suicide",
-  "suicidal",
-  "end my life",
-  "hurt myself",
-  "harm myself",
-  "self harm",
-  "self-harm",
-  "can't stay safe",
-  "cannot stay safe",
-  "not safe with myself",
-  "hurt someone",
-  "kill someone",
-];
-
-const openTalkSignals = [
-  "talk",
-  "listen",
-  "chat",
-  "free",
-  "question",
-  "anything",
-  "confused",
-  "stuck",
-  "lost",
-];
-
-const feelingWords = [
-  "anxious",
-  "sad",
-  "angry",
-  "numb",
-  "lonely",
-  "overwhelmed",
-  "scared",
-  "tired",
-  "ashamed",
-  "guilty",
-  "empty",
-  "hurt",
-  "stressed",
-  "worried",
-  "depressed",
-  "happy",
-  "hopeful",
-];
-
-const relationshipWords = ["friend", "partner", "family", "mother", "father", "sister", "brother", "relationship", "breakup", "love"];
-const workWords = ["work", "job", "boss", "school", "study", "exam", "deadline", "career", "money"];
-const uncertaintyWords = ["should i", "what if", "decision", "choose", "choice", "maybe", "don't know", "do not know"];
-const explanationWords = ["explain", "what is", "what are", "how does", "how do", "define", "meaning of", "tell me about"];
-const planningWords = ["plan", "routine", "schedule", "organize", "goal", "steps", "strategy", "prepare"];
-const draftingWords = ["write", "draft", "message", "email", "caption", "rewrite", "text them", "say to"];
-const creativeWords = ["idea", "brainstorm", "story", "name", "creative", "joke", "poem", "script"];
-const technicalWords = ["code", "bug", "javascript", "html", "css", "database", "terminal", "error", "server", "api"];
-const encouragementWords = ["motivate", "motivation", "lazy", "procrastinate", "discipline", "start", "stuck"];
+const resetNeedLabels = {
+  calm: "Calm down",
+  clarity: "Clarity",
+  connection: "Connection",
+  momentum: "Momentum",
+};
 
 const patterns = {
   calm: [
@@ -180,14 +129,13 @@ function updateProgressStatus() {
     return;
   }
 
-  const chatCount = state.agentMessages.filter((message) => !message.pending).length;
   const safetyCount = Object.values(state.safetyPlan || {}).filter(Boolean).length;
   const total =
     state.moods.length +
     state.journals.length +
     state.reframes.length +
     state.bodyNotes.length +
-    chatCount +
+    state.resetPlans.length +
     safetyCount;
 
   status.textContent = total
@@ -287,7 +235,7 @@ async function showApp(user) {
     initJournal();
     initBreathing();
     initTools();
-    initAgent();
+    initResetPlanner();
     initSafetyPlan();
     initExport();
     initTheme();
@@ -783,513 +731,105 @@ function renderGrounding() {
   $("#groundingPrompt").textContent = groundingSteps[groundingIndex];
 }
 
-function initAgent() {
-  const agentInput = $("#agentInput");
-  $("#sendAgentMessage").addEventListener("click", handleAgentSubmit);
-  agentInput.addEventListener("input", () => {
-    resizeAgentInput();
-    updateAgentSendState();
-  });
-  agentInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      handleAgentSubmit();
-    }
+function initResetPlanner() {
+  $("#buildResetPlan").addEventListener("click", () => {
+    renderResetResult(buildResetPlan());
   });
 
-  $$("[data-agent-prompt]").forEach((button) => {
-    button.addEventListener("click", () => sendAgentPrompt(button.dataset.agentPrompt));
-  });
-
-  $("#clearAgentChat").addEventListener("click", () => {
-    state.agentMessages = [];
-    renderAgentMessages();
-    persistState();
-    showToast("Agent chat cleared.");
-  });
-  updateAgentSendState();
+  $("#saveResetPlan").addEventListener("click", saveResetPlan);
+  $("#clearResetForm").addEventListener("click", clearResetForm);
+  renderResetResult(buildResetPlan(), false);
 }
 
-function handleAgentSubmit() {
-  const input = $("#agentInput").value.trim();
-  if (!input) {
-    showToast("Ask Yassuo anything first.");
-    return;
-  }
-
-  $("#agentInput").value = "";
-  resizeAgentInput();
-  updateAgentSendState();
-  sendAgentPrompt(input);
-}
-
-function resizeAgentInput() {
-  const input = $("#agentInput");
-  input.style.height = "auto";
-  input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
-}
-
-function updateAgentSendState() {
-  $("#sendAgentMessage").disabled = !$("#agentInput").value.trim();
-}
-
-function sendAgentPrompt(input) {
-  state.agentMessages = orderAgentMessages(state.agentMessages);
-  const now = new Date().toISOString();
-  const pendingId = crypto.randomUUID();
-  state.agentMessages.push({
-    id: crypto.randomUUID(),
-    role: "user",
-    text: input,
-    createdAt: now,
-  });
-  state.agentMessages.push({
-    id: pendingId,
-    role: "agent",
-    text: "Yassuo is thinking...",
-    createdAt: new Date(Date.now() + 1).toISOString(),
-    pending: true,
-  });
-  state.agentMessages = state.agentMessages.slice(-80);
-  renderAgentMessages();
-
-  window.setTimeout(() => {
-    const pendingMessage = state.agentMessages.find((message) => message.id === pendingId);
-    if (!pendingMessage) return;
-    pendingMessage.text = generateAgentReply(input);
-    pendingMessage.pending = false;
-    renderAgentMessages();
-    persistState();
-  }, Math.min(900, 260 + input.length * 5));
-}
-
-function generateAgentReply(input) {
-  const normalized = input.toLowerCase();
-  const agentContext = getAgentContext(input);
-
-  if (crisisPhrases.some((phrase) => normalized.includes(phrase))) {
-    return "This may be a safety moment, so please do not handle it alone. If there is immediate danger, call local emergency services now or use your saved help contact. Move near another person if you can, and put distance between yourself and anything you could use to get hurt.";
-  }
-
-  if (includesAny(normalized, ["are you real", "real ai", "llm", "gpt", "chatgpt", "openai"])) {
-    return "I am Yassuo, a local chat agent inside this app. I can answer broadly, reason with what you tell me, remember this account's saved notes, and help you think through almost anything. I do not have live internet or a cloud LLM brain, so I will be honest when I do not know instead of inventing facts.";
-  }
-
-  if (hasWholeWord(normalized, ["hi", "hello", "hey", "salam", "bonjour"])) {
-    return `${personalGreeting()} What feels most present right now: the feeling, the thought, the situation, or the next decision?`;
-  }
-
-  if (includesAny(normalized, ["what can you do", "help me", "how do you work", "what are your limits"])) {
-    return "Talk to me naturally. I can explain, plan, draft messages, brainstorm, debug simple ideas, help with decisions, reflect feelings, summarize patterns, and keep a conversation going from your saved local context. I still keep safety boundaries around harm and emergencies.";
-  }
-
-  if (includesAny(normalized, ["pattern", "summary", "summarize", "trend"])) {
-    return summarizePatterns();
-  }
-
-  if (includesAny(normalized, ["mood", "check-in", "check in", "reflect"])) {
-    return reflectLatestMood();
-  }
-
-  if (!includesAny(normalized, explanationWords) && includesAny(normalized, ["ground", "panic", "anxious", "overwhelmed", "spiral"])) {
-    return "Let's make this smaller. Put both feet on the floor. Name five things you see, then take one 4-2-6 breath: inhale for 4, pause for 2, exhale for 6. After that, write the next physical action, not the whole solution.";
-  }
-
-  if (!includesAny(normalized, explanationWords) && includesAny(normalized, ["reframe", "thought", "belief", "i am", "i can't", "i cannot"])) {
-    return buildReframeReply(input);
-  }
-
-  if (includesAny(normalized, ["journal", "journaling prompt", "diary prompt"])) {
-    return `Try this prompt: ${prompts[Math.floor(Math.random() * prompts.length)]} Keep it to five honest sentences.`;
-  }
-
-  if (includesAny(normalized, technicalWords)) {
-    return buildGeneralAssistantReply(input, agentContext, "technical");
-  }
-
-  if (includesAny(normalized, explanationWords)) {
-    return buildGeneralAssistantReply(input, agentContext, "explain");
-  }
-
-  if (includesAny(normalized, planningWords)) {
-    return buildGeneralAssistantReply(input, agentContext, "plan");
-  }
-
-  if (includesAny(normalized, draftingWords)) {
-    return buildGeneralAssistantReply(input, agentContext, "draft");
-  }
-
-  if (includesAny(normalized, creativeWords)) {
-    return buildGeneralAssistantReply(input, agentContext, "creative");
-  }
-
-  if (includesAny(normalized, encouragementWords)) {
-    return buildGeneralAssistantReply(input, agentContext, "motivation");
-  }
-
-  if (includesAny(normalized, ["sleep", "tired", "rest"])) {
-    return "Tonight's version can be simple: lower stimulation, prepare one thing for tomorrow, and let the unfinished parts stay unfinished on paper instead of in your head.";
-  }
-
-  if (includesAny(normalized, relationshipWords)) {
-    return freeTalkReply(input, agentContext, "relationship");
-  }
-
-  if (includesAny(normalized, workWords)) {
-    return freeTalkReply(input, agentContext, "pressure");
-  }
-
-  if (includesAny(normalized, uncertaintyWords)) {
-    return freeTalkReply(input, agentContext, "decision");
-  }
-
-  if (includesAny(normalized, feelingWords) || includesAny(normalized, openTalkSignals)) {
-    return freeTalkReply(input, agentContext, "feeling");
-  }
-
-  if (input.trim().endsWith("?")) {
-    return answerOpenQuestion(input, agentContext);
-  }
-
-  return freeTalkReply(input, agentContext, "general");
-}
-
-function buildGeneralAssistantReply(input, context, mode) {
-  const normalized = input.toLowerCase();
-  if (includesAny(normalized, ["latest", "today", "news", "weather", "stock", "price", "current"])) {
-    return "I do not have live internet in this local app, so I will not pretend to know current facts. Give me the details you have, and I can help you analyze them, compare options, draft a reply, or decide the next step.";
-  }
-
-  const topic = extractRequestTopic(input);
-  const memoryLine = buildMemoryLine(context);
-  const answer = buildModeAnswer(input, mode, topic);
-  const followUp = buildModeFollowUp(mode, context);
-  return [answer, memoryLine, followUp].filter(Boolean).join(" ");
-}
-
-function buildModeAnswer(input, mode, topic) {
-  if (mode === "technical") {
-    return `Let's handle it like a debugging problem. The clean path is: identify what you expected, what happened instead, copy the exact error, then change one thing at a time. From your message, the first useful move is to make the issue specific enough that we can test it.`;
-  }
-
-  if (mode === "explain") {
-    return `Short answer: I can help explain ${topic}. The easiest way is to split it into three parts: what it is, why it matters, and one example. If the topic is factual or current, give me the facts you have and I will reason from them instead of guessing.`;
-  }
-
-  if (mode === "plan") {
-    return `Here is a simple plan for ${topic}: define what "done" means, choose the smallest first action, set a short time box, and decide what can wait. A good plan should make the next move obvious, not make your life look perfect.`;
-  }
-
-  if (mode === "draft") {
-    return `A clean draft could be: "I want to say this clearly and respectfully: ${makeDraftCore(input)}. I am open to talking about it, but I also want to be honest about what I need."`;
-  }
-
-  if (mode === "creative") {
-    return `For ${topic}, I would start with three directions: one calm and simple, one bold and memorable, and one personal. Pick the direction that matches the feeling you want people to have, then we can sharpen it.`;
-  }
-
-  if (mode === "motivation") {
-    return "You probably do not need a huge motivational speech. You need a start that is too small to argue with: two minutes, one tab, one sentence, one clean surface, one message. Momentum usually arrives after movement, not before it.";
-  }
-
-  return `I can work with that. The useful move is to separate the goal, the obstacle, and the next action so the whole thing stops feeling like one giant cloud.`;
-}
-
-function buildModeFollowUp(mode, context) {
-  if (mode === "technical") {
-    return "Send me the exact error or the part that behaves wrong, and I will walk through it step by step.";
-  }
-  if (mode === "explain") {
-    return "Do you want the simple version, a deeper version, or an example?";
-  }
-  if (mode === "plan") {
-    return "What is the deadline or the amount of energy you actually have today?";
-  }
-  if (mode === "draft") {
-    return "Should the tone be soft, direct, professional, or emotional?";
-  }
-  if (mode === "creative") {
-    return "Do you want more ideas, or should I refine one strong option?";
-  }
-  if (context.recentUserMessages.length) {
-    return "I can also connect this to what you said earlier if that would help.";
-  }
-  return "Tell me one more detail and I will make the answer more specific.";
-}
-
-function buildMemoryLine(context) {
-  if (context.latestMood) {
-    return `I am also keeping your latest mood in mind: ${context.latestMood.score}/10.`;
-  }
-  if (context.recentUserMessages.length) {
-    return "I am keeping the recent thread of this chat in mind.";
-  }
-  return "";
-}
-
-function extractRequestTopic(input) {
-  const cleaned = input
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/^(can you|could you|please|pls|help me|i need you to|tell me about|explain|define|what is|what are|how do|how does|write|draft|plan|brainstorm)\s+/i, "")
-    .replace(/[?.!]+$/g, "");
-  return cleaned || "this";
-}
-
-function makeDraftCore(input) {
-  const normalized = input.toLowerCase();
-  if (includesAny(normalized, ["sorry", "apologize", "apology"])) {
-    return "I am sorry for my part in what happened, and I want to repair it without making excuses";
-  }
-  if (includesAny(normalized, ["boundary", "no", "can't", "cannot"])) {
-    return "I cannot commit to that right now, and I need to protect my time and energy";
-  }
-  if (includesAny(normalized, ["thank", "grateful", "appreciate"])) {
-    return "I appreciate what you did, and I wanted to say thank you properly";
-  }
-  return "this matters to me, and I want to handle it with care";
-}
-
-function reflectLatestMood() {
+function buildResetPlan() {
+  const capacity = $("#resetCapacity").value;
+  const need = $("#resetNeed").value;
+  const concern = $("#resetConcern").value.trim();
   const latest = state.moods[0];
-  if (!latest) {
-    return "I do not have a saved mood yet. Do a quick check-in first, then I can reflect it back with a more useful next step.";
-  }
-
-  const emotions = latest.emotions || [];
-  const emotionsLine = emotions.length
-    ? ` You marked ${emotions.join(", ").toLowerCase()}.`
-    : "";
-  const suggestion =
-    latest.score <= 4
-      ? "Make the next task protective, not productive: food, water, contact, rest, or safety."
-      : latest.score <= 7
-        ? "Choose a steadying action before a solving action."
-        : "Use the steadiness gently: do one meaningful thing and leave margin.";
-
-  return `Your latest check-in was ${latest.score}/10, which reads as ${moodText(latest.score).toLowerCase()}.${emotionsLine} ${suggestion}`;
-}
-
-function summarizePatterns() {
-  const recentMoods = state.moods.slice(0, 7);
-  const recentJournals = state.journals.slice(0, 3);
-
-  if (!recentMoods.length && !recentJournals.length) {
-    return "There is not enough saved data for a pattern yet. Add a few check-ins or journal entries and I can help you notice what repeats.";
-  }
-
-  const average = recentMoods.length
-    ? (recentMoods.reduce((total, entry) => total + entry.score, 0) / recentMoods.length).toFixed(1)
-    : null;
-  const topEmotion = getTopEmotion(recentMoods);
-  const journalLine = recentJournals.length
-    ? ` You also have ${recentJournals.length} recent journal entr${recentJournals.length === 1 ? "y" : "ies"}, so writing is becoming part of the care loop.`
-    : "";
-
-  if (!average) {
-    return `Your recent pattern is mostly in the journal right now.${journalLine} Add mood check-ins when you can so we can connect feelings to days.`;
-  }
-
-  return `Across your last ${recentMoods.length} check-in${recentMoods.length === 1 ? "" : "s"}, your average mood is ${average}/10.${topEmotion ? ` The emotion showing up most is ${topEmotion.toLowerCase()}.` : ""}${journalLine} The next useful experiment is to notice what happens before the number changes.`;
-}
-
-function buildReframeReply(input) {
-  const thought = input
-    .replace(/help me reframe/gi, "")
-    .replace(/reframe/gi, "")
-    .replace(/this thought/gi, "")
-    .trim();
-
-  if (thought.length < 8) {
-    return "Write the exact automatic thought, then ask me again. A good reframe starts with the real sentence, not the polished one.";
-  }
-
-  return `Try: "I am having the thought that ${thought}. It may be pointing to something important, but it is not the whole truth. One balanced next step is to check the facts and choose the smallest repair."`;
-}
-
-function personalGreeting() {
-  const name = currentUser?.name?.split(" ")[0];
-  return name ? `Hi ${name}. I am here.` : "Hi. I am here.";
-}
-
-function getAgentContext(input) {
-  const latestMood = state.moods[0] || null;
-  const recentJournal = state.journals[0] || null;
-  const recentUserMessages = orderAgentMessages(state.agentMessages)
-    .filter((message) => message.role === "user" && message.text !== input)
-    .slice(-3)
-    .map((message) => message.text);
-  const detectedFeeling = feelingWords.find((word) => input.toLowerCase().includes(word)) || "";
+  const moodPrefix = latest
+    ? `Latest mood: ${latest.score}/10 (${moodText(latest.score).toLowerCase()}).`
+    : "No mood check-in yet.";
+  const focus = concern || resetNeedLabels[need];
 
   return {
-    detectedFeeling,
-    latestMood,
-    recentJournal,
-    recentUserMessages,
+    capacity,
+    need,
+    concern,
+    title: `${resetNeedLabels[need]} reset`,
+    summary: `${moodPrefix} Capacity is ${capacity}. Focus: ${focus}.`,
+    steps: getResetSteps(capacity, need, focus),
   };
 }
 
-function freeTalkReply(input, context, mode) {
-  const reflection = buildReflection(input, context);
-  const validation = buildValidation(context, mode);
-  const nextMove = buildNextMove(mode, context);
-  const question = buildFollowUpQuestion(mode, context);
+function getResetSteps(capacity, need, focus) {
+  const firstStep =
+    capacity === "low"
+      ? "Lower the demand: choose one task that can wait and one basic need to meet."
+      : capacity === "high"
+        ? "Use the energy carefully: choose one meaningful task and leave margin after it."
+        : "Pick one steady action that can be finished in 15 minutes or less.";
 
-  return `${reflection} ${validation} ${nextMove} ${question}`;
+  const needStep = {
+    calm: "Regulate first: breathe out slowly, unclench your jaw, and reduce noise or screen pressure.",
+    clarity: "Clarify the problem: write the fact, the fear, and the next decision as three separate lines.",
+    connection: "Reach outward: send one honest low-pressure message or move near someone safe.",
+    momentum: "Start tiny: open the task, set a 10-minute timer, and stop when the timer ends if needed.",
+  }[need];
+
+  return [
+    firstStep,
+    needStep,
+    `Make it concrete: for "${focus}", write the next physical action and do only that first.`,
+  ];
 }
 
-function buildReflection(input, context) {
-  const cleaned = input.trim().replace(/\s+/g, " ");
-  if (context.detectedFeeling) {
-    return `It sounds like ${context.detectedFeeling} is part of this.`;
-  }
-  if (cleaned.length < 36) {
-    return `I hear you saying: "${cleaned}".`;
-  }
-  return `I hear a few layers in that: what happened, what it means to you, and what it is asking from you now.`;
+function renderResetResult(plan, announce = true) {
+  $("#resetResult").innerHTML = `
+    <strong>${escapeHtml(plan.title)}</strong>
+    <ol>
+      ${plan.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+    </ol>
+  `;
+  if (announce) showToast("Reset plan built.");
 }
 
-function buildValidation(context, mode) {
-  const moodLine = context.latestMood
-    ? ` Your latest check-in is ${context.latestMood.score}/10, so I will keep this grounded and practical.`
-    : "";
-
-  if (mode === "relationship") {
-    return `It makes sense that relationships can feel loud inside because they touch belonging, boundaries, and repair.${moodLine}`;
-  }
-  if (mode === "pressure") {
-    return `Pressure often tricks the mind into treating everything as urgent at once.${moodLine}`;
-  }
-  if (mode === "decision") {
-    return `Uncertainty can feel like danger even when it is really a request for clearer options.${moodLine}`;
-  }
-  if (mode === "feeling") {
-    return `You do not have to justify the feeling before you care for it.${moodLine}`;
-  }
-  return `We can stay with this without rushing to fix the whole thing.${moodLine}`;
-}
-
-function buildNextMove(mode, context) {
-  if (mode === "relationship") {
-    return "Try separating the facts from the story: what did they do, what did you feel, and what boundary or request would be honest?";
-  }
-  if (mode === "pressure") {
-    return "Pick the smallest visible step, then make a second list called 'not now' so your mind can stop holding everything.";
-  }
-  if (mode === "decision") {
-    return "Name the two or three real options, then ask which one protects your values with the least self-betrayal.";
-  }
-  if (mode === "feeling" && context.detectedFeeling) {
-    return `For ${context.detectedFeeling}, start with the body first: breathe out slowly, relax your jaw, and lower today's demand by one notch.`;
-  }
-  return "A useful next step is to write one sentence beginning with 'The part I am avoiding is...' and answer it plainly.";
-}
-
-function buildFollowUpQuestion(mode, context) {
-  if (mode === "relationship") {
-    return "Do you want to be understood, to set a boundary, or to decide what to do next?";
-  }
-  if (mode === "pressure") {
-    return "What is the one thing that would make the next hour 10% less heavy?";
-  }
-  if (mode === "decision") {
-    return "What would you choose if you only had to live with the next 24 hours, not the whole future?";
-  }
-  if (context.recentUserMessages.length) {
-    return "Is this connected to what you mentioned earlier, or does it feel like a new thread?";
-  }
-  return "What part should we stay with first: the feeling, the thought, or the situation?";
-}
-
-function answerOpenQuestion(input, context) {
-  const normalized = input.toLowerCase();
-  if (includesAny(normalized, ["why do i", "why am i"])) {
-    return "There may be a reason, but we do not have to force one too quickly. A gentler way in is: what was happening right before this feeling got stronger, and what did your mind decide it meant about you?";
-  }
-  if (includesAny(normalized, ["what should i do", "what do i do"])) {
-    return "Start with a stabilizing step, then a clarifying step. Stabilize: breathe, drink water, and reduce stimulation. Clarify: write the smallest honest action you can take without pretending the whole problem is solved.";
-  }
-  if (includesAny(normalized, ["am i wrong", "is it wrong", "am i bad"])) {
-    return "I would not jump straight to judging you. Let's separate impact from identity: what happened, who was affected, what can be repaired, and what does not need to become a story about your whole self?";
-  }
-  if (includesAny(normalized, ["will i be okay", "is it going to be okay"])) {
-    return "I cannot promise the future, but I can stay with this moment. Right now the goal is not to solve your life; it is to get through the next few minutes with care and less aloneness.";
-  }
-
-  return freeTalkReply(input, context, "general");
-}
-
-function getTopEmotion(entries) {
-  const counts = new Map();
-  entries.forEach((entry) => {
-    (entry.emotions || []).forEach((emotion) =>
-      counts.set(emotion, (counts.get(emotion) || 0) + 1),
-    );
+function saveResetPlan() {
+  const plan = buildResetPlan();
+  state.resetPlans.unshift({
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    ...plan,
   });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+  state.resetPlans = state.resetPlans.slice(0, 40);
+  renderResetResult(plan, false);
+  renderResetPlans();
+  persistState();
+  showToast("Reset plan saved.");
 }
 
-function includesAny(value, needles) {
-  return needles.some((needle) => value.includes(needle));
+function clearResetForm() {
+  $("#resetCapacity").value = "medium";
+  $("#resetNeed").value = "calm";
+  $("#resetConcern").value = "";
+  renderResetResult(buildResetPlan(), false);
+  showToast("Reset form cleared.");
 }
 
-function hasWholeWord(value, words) {
-  return words.some((word) => new RegExp(`(^|\\W)${escapeRegExp(word)}(\\W|$)`, "i").test(value));
-}
-
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function renderAgentMessages() {
-  const messages = state.agentMessages.length
-    ? orderAgentMessages(state.agentMessages)
-    : [
-        {
-          role: "agent",
-          text: "Hi, I am Yassuo. You can talk to me freely. I can reflect, ask questions, help you reframe, ground you, or notice patterns from your local notes.",
-        },
-      ];
-
-  $("#agentMessages").innerHTML = messages
-    .map(
-      (message) => `
-        <article class="agent-message is-${message.role === "user" ? "user" : "agent"}${message.pending ? " is-pending" : ""}">
-          <strong>${message.role === "user" ? "You" : "Yassuo"}</strong>
-          <p>${escapeHtml(message.text)}</p>
-        </article>
-      `,
-    )
-    .join("");
-
-  const messagePanel = $("#agentMessages");
-  messagePanel.scrollTop = messagePanel.scrollHeight;
-}
-
-function orderAgentMessages(messages) {
-  const ordered = [...messages].sort((a, b) => {
-    const timeDifference = new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
-    if (timeDifference !== 0) return timeDifference;
-    if (a.role === b.role) return 0;
-    return a.role === "user" ? -1 : 1;
-  });
-
-  for (let index = 0; index < ordered.length - 1; index += 1) {
-    const current = ordered[index];
-    const next = ordered[index + 1];
-    const currentTime = new Date(current.createdAt || 0).getTime();
-    const nextTime = new Date(next.createdAt || 0).getTime();
-    if (
-      current.role === "agent" &&
-      next.role === "user" &&
-      Math.abs(currentTime - nextTime) < 5000
-    ) {
-      ordered[index] = next;
-      ordered[index + 1] = current;
-    }
-  }
-
-  return ordered;
+function renderResetPlans() {
+  $("#resetPlans").innerHTML = state.resetPlans.slice(0, 3).length
+    ? state.resetPlans
+        .slice(0, 3)
+        .map(
+          (plan) => `
+            <article class="entry">
+              <strong>${escapeHtml(plan.title || "Reset plan")}</strong>
+              <small>${formatDate(plan.createdAt)}</small>
+              <p>${escapeHtml(plan.summary || "")}</p>
+            </article>
+          `,
+        )
+        .join("")
+    : `<article class="entry"><p>Saved reset plans will appear here.</p></article>`;
 }
 
 function initSafetyPlan() {
@@ -1340,7 +880,7 @@ function render() {
   renderMood();
   renderJournal();
   renderReframes();
-  renderAgentMessages();
+  renderResetPlans();
   updateProgressStatus();
   $("#streakText").textContent = careStreak()
     ? "You showed up today."

@@ -17,7 +17,7 @@
         <div>
           <p class="eyebrow">Stillpoint</p>
           <h1 id="authTitle">Your private therapy companion.</h1>
-          <p>Make an account on this device to keep check-ins, journals, safety plans, and agent chat separated from other users.</p>
+          <p>Make an account on this device to keep check-ins, journals, reset plans, and safety plans separated from other users.</p>
         </div>
       </div>
 
@@ -210,27 +210,45 @@
               <button class="ghost-button" type="button" data-jump="tools">Open tools</button>
             </article>
 
-            <article class="panel agent-card" aria-labelledby="agent-title">
+            <article class="panel reset-card" aria-labelledby="reset-title">
               <div class="panel-heading">
                 <div>
-                  <h3 id="agent-title">Yassuo, your AI chat companion</h3>
-                  <span>Open free-talk mode</span>
+                  <h3 id="reset-title">Daily reset plan</h3>
+                  <span>Build one small plan you can actually do</span>
                 </div>
-                <button class="ghost-button small-button" type="button" id="clearAgentChat" aria-label="Clear agent chat">Clear</button>
+                <button class="ghost-button small-button" type="button" id="clearResetForm">Clear</button>
               </div>
-              <div class="agent-messages" id="agentMessages" aria-live="polite"></div>
-              <div class="agent-actions" aria-label="Agent quick prompts">
-                <button class="chip" type="button" data-agent-prompt="I want to talk freely. Ask me one thoughtful question.">Free talk</button>
-                <button class="chip" type="button" data-agent-prompt="Help me ground for two minutes.">Ground me</button>
-                <button class="chip" type="button" data-agent-prompt="Reflect on my latest mood.">Reflect mood</button>
-                <button class="chip" type="button" data-agent-prompt="Help me reframe this thought.">Reframe</button>
-                <button class="chip" type="button" data-agent-prompt="Summarize my recent patterns.">Patterns</button>
+              <div class="reset-form">
+                <label>
+                  <span>Capacity</span>
+                  <select id="resetCapacity">
+                    <option value="low">Low energy</option>
+                    <option value="medium" selected>Medium energy</option>
+                    <option value="high">Good energy</option>
+                  </select>
+                </label>
+                <label>
+                  <span>What do you need?</span>
+                  <select id="resetNeed">
+                    <option value="calm">Calm down</option>
+                    <option value="clarity">Get clarity</option>
+                    <option value="connection">Reconnect</option>
+                    <option value="momentum">Start moving</option>
+                  </select>
+                </label>
+                <label class="reset-wide">
+                  <span>What is taking the most space?</span>
+                  <textarea id="resetConcern" rows="3" placeholder="A worry, task, conflict, feeling, or decision..."></textarea>
+                </label>
               </div>
-              <div class="agent-input-row">
-                <label class="sr-only" for="agentInput">Message Yassuo</label>
-                <textarea id="agentInput" rows="2" placeholder="Ask Yassuo anything or talk through what is happening."></textarea>
-                <button class="primary-button" type="button" id="sendAgentMessage">Send</button>
+              <div class="button-row">
+                <button class="primary-button" type="button" id="buildResetPlan">Build plan</button>
+                <button class="ghost-button" type="button" id="saveResetPlan">Save plan</button>
               </div>
+              <div class="reset-result" id="resetResult" aria-live="polite">
+                <p>Your reset plan will appear here.</p>
+              </div>
+              <div class="entry-list compact reset-history" id="resetPlans"></div>
             </article>
           </div>
         </section>

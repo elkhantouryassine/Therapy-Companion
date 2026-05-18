@@ -1,6 +1,6 @@
 (function () {
   const DB_NAME = "stillpoint-therapy-db";
-  const DB_VERSION = 4;
+  const DB_VERSION = 5;
   const LEGACY_STORAGE_KEY = "stillpoint-therapy-companion-v1";
   const META_STORE = "meta";
   const PREFERENCES_STORE = "preferences";
@@ -12,7 +12,7 @@
     journals: 80,
     reframes: 40,
     bodyNotes: 30,
-    agentMessages: 80,
+    resetPlans: 40,
   };
 
   const entryStores = Object.keys(STORE_LIMITS);
@@ -23,7 +23,7 @@
       journals: [],
       reframes: [],
       bodyNotes: [],
-      agentMessages: [],
+      resetPlans: [],
       safetyPlan: {
         warning: "",
         reasons: "",
@@ -151,8 +151,8 @@
       bodyNotes: Array.isArray(rawState.bodyNotes)
         ? rawState.bodyNotes.slice(0, STORE_LIMITS.bodyNotes)
         : [],
-      agentMessages: Array.isArray(rawState.agentMessages)
-        ? rawState.agentMessages.slice(0, STORE_LIMITS.agentMessages)
+      resetPlans: Array.isArray(rawState.resetPlans)
+        ? rawState.resetPlans.slice(0, STORE_LIMITS.resetPlans)
         : [],
       safetyPlan: {
         ...empty.safetyPlan,
@@ -346,9 +346,6 @@
   async function readAllByDate(db, storeName, userId) {
     const transaction = db.transaction(storeName, "readonly");
     const records = await requestToPromise(transaction.objectStore(storeName).index("userId").getAll(userId));
-    if (storeName === "agentMessages") {
-      return records.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    }
     return records.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 

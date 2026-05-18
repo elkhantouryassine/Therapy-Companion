@@ -1,6 +1,6 @@
 # Stillpoint Therapy Companion
 
-A self-contained therapy companion web app for private accounts, check-ins, journaling, grounding, reframing, breathing, local free-talk agent support, and safety planning.
+A self-contained therapy companion web app for private accounts, check-ins, journaling, grounding, reframing, breathing, daily reset planning, and safety planning.
 
 Open `index.html` in a browser, or run `node dev-server.js` and visit the local URL it prints. If `4173` is already busy, the app can run on another port such as `http://127.0.0.1:4174/`.
 
@@ -15,7 +15,7 @@ Database stores:
 - `reframes`
 - `bodyNotes`
 - `safetyPlan`
-- `agentMessages`
+- `resetPlans`
 - `preferences`
 
 For immediate danger, use local emergency services or a trusted local help contact.

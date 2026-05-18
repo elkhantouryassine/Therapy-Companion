@@ -227,7 +227,6 @@ a {
 }
 
 .auth-form input,
-.agent-input-row textarea,
 textarea,
 select {
   width: 100%;
@@ -734,8 +733,7 @@ select {
 
 .metric-card,
 .panel,
-.entry,
-.agent-message {
+.entry {
   overflow-wrap: anywhere;
 }
 
@@ -811,123 +809,67 @@ select {
   margin-top: auto;
 }
 
-.agent-card {
+.reset-card {
   grid-column: span 2;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: clamp(420px, 56vh, 680px);
+  min-height: 420px;
 }
 
-.agent-messages {
+.reset-form {
   display: grid;
-  align-content: start;
-  gap: 10px;
-  flex: 1;
-  min-height: clamp(220px, 34vh, 360px);
-  max-height: clamp(300px, 48vh, 520px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   margin-bottom: 14px;
-  padding: 12px;
-  overflow-y: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(222, 236, 230, 0.46), rgba(255, 255, 255, 0.42)),
-    rgba(255, 255, 255, 0.54);
 }
 
-:root[data-theme="dark"] .agent-messages {
-  background:
-    linear-gradient(180deg, rgba(29, 51, 46, 0.58), rgba(244, 241, 232, 0.05)),
-    rgba(11, 17, 15, 0.42);
-}
-
-.agent-message {
-  max-width: 82%;
-  padding: 10px 12px;
-  border: 1px solid rgba(216, 224, 211, 0.9);
-  border-radius: var(--radius);
+.reset-form label {
+  display: grid;
+  gap: 8px;
   color: var(--muted);
-  background: rgba(255, 255, 255, 0.78);
+  font-size: 0.86rem;
+  font-weight: 760;
+}
+
+.reset-wide {
+  grid-column: 1 / -1;
+}
+
+.reset-result {
+  margin: 14px 0 0;
+  padding: 14px;
+  border: 1px solid rgba(44, 131, 119, 0.24);
+  border-radius: var(--radius);
+  background: rgba(222, 236, 230, 0.54);
+}
+
+:root[data-theme="dark"] .reset-result {
+  background: rgba(108, 203, 187, 0.12);
+}
+
+.reset-result p,
+.reset-result ol {
+  margin: 0;
+}
+
+.reset-result ol {
+  display: grid;
+  gap: 8px;
+  padding-left: 22px;
+  color: var(--muted);
   line-height: 1.45;
 }
 
-:root[data-theme="dark"] .agent-message {
-  border-color: rgba(244, 241, 232, 0.12);
-  background: rgba(244, 241, 232, 0.07);
-}
-
-.agent-message strong {
+.reset-result strong {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   color: var(--ink);
-  font-size: 0.78rem;
 }
 
-.agent-message p {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.agent-message.is-user {
-  justify-self: end;
-  color: rgba(255, 255, 255, 0.88);
-  border-color: rgba(23, 102, 91, 0.35);
-  background: var(--teal-dark);
-}
-
-.agent-message.is-user strong {
-  color: #fff;
-}
-
-:root[data-theme="dark"] .agent-message.is-user {
-  color: #0e1815;
-  background: var(--teal-dark);
-}
-
-:root[data-theme="dark"] .agent-message.is-user strong {
-  color: #0e1815;
-}
-
-.agent-message.is-agent {
-  justify-self: start;
-  background: rgba(222, 236, 230, 0.88);
-}
-
-:root[data-theme="dark"] .agent-message.is-agent {
-  background: rgba(29, 51, 46, 0.88);
-}
-
-.agent-message.is-pending {
-  color: var(--moss);
-  font-style: italic;
-}
-
-.agent-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.agent-input-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-  margin-top: auto;
-}
-
-.agent-input-row textarea {
-  min-height: 58px;
-  max-height: 180px;
+.reset-history {
+  max-height: 220px;
   overflow-y: auto;
-}
-
-#sendAgentMessage:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
-  transform: none;
 }
 
 .sr-only {
@@ -1438,9 +1380,8 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .agent-card {
+  .reset-card {
     grid-column: auto;
-    min-height: 500px;
   }
 
   .safety-plan h3 {
@@ -1511,8 +1452,7 @@ select {
 
   .topbar-actions,
   .button-row,
-  .ambient-actions,
-  .agent-input-row {
+  .ambient-actions {
     align-items: stretch;
     display: flex;
     flex-direction: column;
@@ -1521,8 +1461,7 @@ select {
   .primary-button,
   .ghost-button,
   .light-button,
-  .account-pill,
-  .agent-input-row .primary-button {
+  .account-pill {
     width: 100%;
   }
 
@@ -1531,21 +1470,8 @@ select {
     max-width: none;
   }
 
-  .agent-message {
-    max-width: 94%;
-  }
-
-  .agent-card {
-    min-height: 540px;
-  }
-
-  .agent-messages {
-    min-height: 260px;
-    max-height: 54vh;
-  }
-
-  .agent-actions .chip {
-    flex: 1 1 calc(50% - 8px);
+  .reset-form {
+    grid-template-columns: 1fr;
   }
 
   .panel-heading .small-button {
