@@ -96,6 +96,12 @@ const feelingWords = [
 const relationshipWords = ["friend", "partner", "family", "mother", "father", "sister", "brother", "relationship", "breakup", "love"];
 const workWords = ["work", "job", "boss", "school", "study", "exam", "deadline", "career", "money"];
 const uncertaintyWords = ["should i", "what if", "decision", "choose", "choice", "maybe", "don't know", "do not know"];
+const explanationWords = ["explain", "what is", "what are", "how does", "how do", "define", "meaning of", "tell me about"];
+const planningWords = ["plan", "routine", "schedule", "organize", "goal", "steps", "strategy", "prepare"];
+const draftingWords = ["write", "draft", "message", "email", "caption", "rewrite", "text them", "say to"];
+const creativeWords = ["idea", "brainstorm", "story", "name", "creative", "joke", "poem", "script"];
+const technicalWords = ["code", "bug", "javascript", "html", "css", "database", "terminal", "error", "server", "api"];
+const encouragementWords = ["motivate", "motivation", "lazy", "procrastinate", "discipline", "start", "stuck"];
 
 const patterns = {
   calm: [
@@ -778,8 +784,13 @@ function renderGrounding() {
 }
 
 function initAgent() {
+  const agentInput = $("#agentInput");
   $("#sendAgentMessage").addEventListener("click", handleAgentSubmit);
-  $("#agentInput").addEventListener("keydown", (event) => {
+  agentInput.addEventListener("input", () => {
+    resizeAgentInput();
+    updateAgentSendState();
+  });
+  agentInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       handleAgentSubmit();
@@ -796,17 +807,30 @@ function initAgent() {
     persistState();
     showToast("Agent chat cleared.");
   });
+  updateAgentSendState();
 }
 
 function handleAgentSubmit() {
   const input = $("#agentInput").value.trim();
   if (!input) {
-    showToast("Ask Still for a small next step.");
+    showToast("Ask Yassuo anything first.");
     return;
   }
 
   $("#agentInput").value = "";
+  resizeAgentInput();
+  updateAgentSendState();
   sendAgentPrompt(input);
+}
+
+function resizeAgentInput() {
+  const input = $("#agentInput");
+  input.style.height = "auto";
+  input.style.height = `${Math.min(input.scrollHeight, 180)}px`;
+}
+
+function updateAgentSendState() {
+  $("#sendAgentMessage").disabled = !$("#agentInput").value.trim();
 }
 
 function sendAgentPrompt(input) {
@@ -822,7 +846,7 @@ function sendAgentPrompt(input) {
   state.agentMessages.push({
     id: pendingId,
     role: "agent",
-    text: "Thinking with you...",
+    text: "Yassuo is thinking...",
     createdAt: new Date(Date.now() + 1).toISOString(),
     pending: true,
   });
@@ -836,7 +860,7 @@ function sendAgentPrompt(input) {
     pendingMessage.pending = false;
     renderAgentMessages();
     persistState();
-  }, 450);
+  }, Math.min(900, 260 + input.length * 5));
 }
 
 function generateAgentReply(input) {
@@ -844,19 +868,19 @@ function generateAgentReply(input) {
   const agentContext = getAgentContext(input);
 
   if (crisisPhrases.some((phrase) => normalized.includes(phrase))) {
-    return "This may be a safety moment, so please do not handle it alone. If there is immediate danger, call local emergency services now or use your saved help contact. If you are in the U.S., call or text 988 or use 988 chat. Move near another person if you can, and put distance between yourself and anything you could use to get hurt.";
+    return "This may be a safety moment, so please do not handle it alone. If there is immediate danger, call local emergency services now or use your saved help contact. Move near another person if you can, and put distance between yourself and anything you could use to get hurt.";
   }
 
   if (includesAny(normalized, ["are you real", "real ai", "llm", "gpt", "chatgpt", "openai"])) {
-    return "I am a local support agent built into this app, not a cloud LLM. I can still talk freely, remember this account's notes, help you reflect, and ask useful questions. I do not have live internet knowledge, and I should not replace a real clinician.";
+    return "I am Yassuo, a local chat agent inside this app. I can answer broadly, reason with what you tell me, remember this account's saved notes, and help you think through almost anything. I do not have live internet or a cloud LLM brain, so I will be honest when I do not know instead of inventing facts.";
   }
 
-  if (includesAny(normalized, ["hi", "hello", "hey", "salam", "bonjour"])) {
+  if (hasWholeWord(normalized, ["hi", "hello", "hey", "salam", "bonjour"])) {
     return `${personalGreeting()} What feels most present right now: the feeling, the thought, the situation, or the next decision?`;
   }
 
-  if (includesAny(normalized, ["what can you do", "help me", "how do you work"])) {
-    return "You can talk to me naturally. I can reflect what I hear, ask follow-up questions, summarize your saved patterns, help reframe a thought, ground you when things feel intense, or turn a messy situation into one small next step.";
+  if (includesAny(normalized, ["what can you do", "help me", "how do you work", "what are your limits"])) {
+    return "Talk to me naturally. I can explain, plan, draft messages, brainstorm, debug simple ideas, help with decisions, reflect feelings, summarize patterns, and keep a conversation going from your saved local context. I still keep safety boundaries around harm and emergencies.";
   }
 
   if (includesAny(normalized, ["pattern", "summary", "summarize", "trend"])) {
@@ -867,16 +891,40 @@ function generateAgentReply(input) {
     return reflectLatestMood();
   }
 
-  if (includesAny(normalized, ["ground", "panic", "anxious", "overwhelmed", "spiral"])) {
+  if (!includesAny(normalized, explanationWords) && includesAny(normalized, ["ground", "panic", "anxious", "overwhelmed", "spiral"])) {
     return "Let's make this smaller. Put both feet on the floor. Name five things you see, then take one 4-2-6 breath: inhale for 4, pause for 2, exhale for 6. After that, write the next physical action, not the whole solution.";
   }
 
-  if (includesAny(normalized, ["reframe", "thought", "belief", "i am", "i can't", "i cannot"])) {
+  if (!includesAny(normalized, explanationWords) && includesAny(normalized, ["reframe", "thought", "belief", "i am", "i can't", "i cannot"])) {
     return buildReframeReply(input);
   }
 
-  if (includesAny(normalized, ["journal", "write", "prompt"])) {
+  if (includesAny(normalized, ["journal", "journaling prompt", "diary prompt"])) {
     return `Try this prompt: ${prompts[Math.floor(Math.random() * prompts.length)]} Keep it to five honest sentences.`;
+  }
+
+  if (includesAny(normalized, technicalWords)) {
+    return buildGeneralAssistantReply(input, agentContext, "technical");
+  }
+
+  if (includesAny(normalized, explanationWords)) {
+    return buildGeneralAssistantReply(input, agentContext, "explain");
+  }
+
+  if (includesAny(normalized, planningWords)) {
+    return buildGeneralAssistantReply(input, agentContext, "plan");
+  }
+
+  if (includesAny(normalized, draftingWords)) {
+    return buildGeneralAssistantReply(input, agentContext, "draft");
+  }
+
+  if (includesAny(normalized, creativeWords)) {
+    return buildGeneralAssistantReply(input, agentContext, "creative");
+  }
+
+  if (includesAny(normalized, encouragementWords)) {
+    return buildGeneralAssistantReply(input, agentContext, "motivation");
   }
 
   if (includesAny(normalized, ["sleep", "tired", "rest"])) {
@@ -904,6 +952,102 @@ function generateAgentReply(input) {
   }
 
   return freeTalkReply(input, agentContext, "general");
+}
+
+function buildGeneralAssistantReply(input, context, mode) {
+  const normalized = input.toLowerCase();
+  if (includesAny(normalized, ["latest", "today", "news", "weather", "stock", "price", "current"])) {
+    return "I do not have live internet in this local app, so I will not pretend to know current facts. Give me the details you have, and I can help you analyze them, compare options, draft a reply, or decide the next step.";
+  }
+
+  const topic = extractRequestTopic(input);
+  const memoryLine = buildMemoryLine(context);
+  const answer = buildModeAnswer(input, mode, topic);
+  const followUp = buildModeFollowUp(mode, context);
+  return [answer, memoryLine, followUp].filter(Boolean).join(" ");
+}
+
+function buildModeAnswer(input, mode, topic) {
+  if (mode === "technical") {
+    return `Let's handle it like a debugging problem. The clean path is: identify what you expected, what happened instead, copy the exact error, then change one thing at a time. From your message, the first useful move is to make the issue specific enough that we can test it.`;
+  }
+
+  if (mode === "explain") {
+    return `Short answer: I can help explain ${topic}. The easiest way is to split it into three parts: what it is, why it matters, and one example. If the topic is factual or current, give me the facts you have and I will reason from them instead of guessing.`;
+  }
+
+  if (mode === "plan") {
+    return `Here is a simple plan for ${topic}: define what "done" means, choose the smallest first action, set a short time box, and decide what can wait. A good plan should make the next move obvious, not make your life look perfect.`;
+  }
+
+  if (mode === "draft") {
+    return `A clean draft could be: "I want to say this clearly and respectfully: ${makeDraftCore(input)}. I am open to talking about it, but I also want to be honest about what I need."`;
+  }
+
+  if (mode === "creative") {
+    return `For ${topic}, I would start with three directions: one calm and simple, one bold and memorable, and one personal. Pick the direction that matches the feeling you want people to have, then we can sharpen it.`;
+  }
+
+  if (mode === "motivation") {
+    return "You probably do not need a huge motivational speech. You need a start that is too small to argue with: two minutes, one tab, one sentence, one clean surface, one message. Momentum usually arrives after movement, not before it.";
+  }
+
+  return `I can work with that. The useful move is to separate the goal, the obstacle, and the next action so the whole thing stops feeling like one giant cloud.`;
+}
+
+function buildModeFollowUp(mode, context) {
+  if (mode === "technical") {
+    return "Send me the exact error or the part that behaves wrong, and I will walk through it step by step.";
+  }
+  if (mode === "explain") {
+    return "Do you want the simple version, a deeper version, or an example?";
+  }
+  if (mode === "plan") {
+    return "What is the deadline or the amount of energy you actually have today?";
+  }
+  if (mode === "draft") {
+    return "Should the tone be soft, direct, professional, or emotional?";
+  }
+  if (mode === "creative") {
+    return "Do you want more ideas, or should I refine one strong option?";
+  }
+  if (context.recentUserMessages.length) {
+    return "I can also connect this to what you said earlier if that would help.";
+  }
+  return "Tell me one more detail and I will make the answer more specific.";
+}
+
+function buildMemoryLine(context) {
+  if (context.latestMood) {
+    return `I am also keeping your latest mood in mind: ${context.latestMood.score}/10.`;
+  }
+  if (context.recentUserMessages.length) {
+    return "I am keeping the recent thread of this chat in mind.";
+  }
+  return "";
+}
+
+function extractRequestTopic(input) {
+  const cleaned = input
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/^(can you|could you|please|pls|help me|i need you to|tell me about|explain|define|what is|what are|how do|how does|write|draft|plan|brainstorm)\s+/i, "")
+    .replace(/[?.!]+$/g, "");
+  return cleaned || "this";
+}
+
+function makeDraftCore(input) {
+  const normalized = input.toLowerCase();
+  if (includesAny(normalized, ["sorry", "apologize", "apology"])) {
+    return "I am sorry for my part in what happened, and I want to repair it without making excuses";
+  }
+  if (includesAny(normalized, ["boundary", "no", "can't", "cannot"])) {
+    return "I cannot commit to that right now, and I need to protect my time and energy";
+  }
+  if (includesAny(normalized, ["thank", "grateful", "appreciate"])) {
+    return "I appreciate what you did, and I wanted to say thank you properly";
+  }
+  return "this matters to me, and I want to handle it with care";
 }
 
 function reflectLatestMood() {
@@ -1089,6 +1233,14 @@ function includesAny(value, needles) {
   return needles.some((needle) => value.includes(needle));
 }
 
+function hasWholeWord(value, words) {
+  return words.some((word) => new RegExp(`(^|\\W)${escapeRegExp(word)}(\\W|$)`, "i").test(value));
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function renderAgentMessages() {
   const messages = state.agentMessages.length
     ? orderAgentMessages(state.agentMessages)
@@ -1103,7 +1255,7 @@ function renderAgentMessages() {
     .map(
       (message) => `
         <article class="agent-message is-${message.role === "user" ? "user" : "agent"}${message.pending ? " is-pending" : ""}">
-          <strong>${message.role === "user" ? "You" : "Still"}</strong>
+          <strong>${message.role === "user" ? "You" : "Yassuo"}</strong>
           <p>${escapeHtml(message.text)}</p>
         </article>
       `,
